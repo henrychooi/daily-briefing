@@ -12,7 +12,7 @@ HISTORY_FILE = "seen_ids.json"
 # --- DATA SOURCES ---
 
 def get_huggingface_daily_papers():
-    """Fetches top 5 papers from HF Daily Papers"""
+    """Fetches top 6 papers from HF Daily Papers and checks for code/weights"""
     today = datetime.now().strftime("%Y-%m-%d")
     url = f"https://huggingface.co/api/daily_papers?date={today}"
     
@@ -24,12 +24,19 @@ def get_huggingface_daily_papers():
         data = response.json()
         papers = []
         
-        # Take top 5 to avoid overflow
-        for paper in data[:5]:
+        for paper in data[:6]:
             p = paper["paper"]
+            
+            has_github = p.get("githubUrl") is not None
+            has_models = bool(p.get("modelIds")) 
+            
+            code_flag = ""
+            if has_github or has_models:
+                code_flag = "  💻 **[Code/Weights Available]**"
+            
             papers.append({
                 "id": p["id"],
-                "title": p["title"],
+                "title": f"{p['title']}{code_flag}",
                 "link": f"https://huggingface.co/papers/{p['id']}",
                 "type": "Paper"
             })
@@ -39,7 +46,7 @@ def get_huggingface_daily_papers():
         return []
 
 def get_trending_models():
-    """Fetches top 5 trending LLM/Speech models from HF"""
+    """Fetches top 10 trending LLM/Speech models from HF"""
     api = HfApi()
     models = api.list_models(
         filter=["text-generation", "automatic-speech-recognition"],
@@ -60,7 +67,7 @@ def get_trending_models():
                 "likes": m.likes,
                 "type": "Model"
             })
-            if len(new_models) >= 5: break # Hard limit
+            if len(new_models) >= 10: break # Hard limit
             
     return new_models
 
